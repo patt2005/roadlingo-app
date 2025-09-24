@@ -5,9 +5,9 @@ import '../models/word.dart';
 
 class LessonProvider extends ChangeNotifier {
   List<models.Category> _categories = [];
-  
+
   List<models.Category> get categories => _categories;
-  
+
   List<Lesson> get allLessons {
     List<Lesson> lessons = [];
     for (models.Category category in _categories) {
@@ -15,7 +15,7 @@ class LessonProvider extends ChangeNotifier {
     }
     return lessons;
   }
-  
+
   void initializeCategories() {
     _categories = [
       models.Category(
@@ -87,7 +87,10 @@ class LessonProvider extends ChangeNotifier {
             id: '1-2',
             title: 'Exterior Parts',
             words: [
-              Word(text: 'Hood', imageUrl: 'https://example.com/images/hood.jpg'),
+              Word(
+                text: 'Hood',
+                imageUrl: 'https://example.com/images/hood.jpg',
+              ),
               Word(
                 text: 'Bumper',
                 imageUrl: 'https://example.com/images/bumper.jpg',
@@ -143,14 +146,20 @@ class LessonProvider extends ChangeNotifier {
                 text: 'Windshield',
                 imageUrl: 'https://example.com/images/windshield.jpg',
               ),
-              Word(text: 'Door', imageUrl: 'https://example.com/images/door.jpg'),
+              Word(
+                text: 'Door',
+                imageUrl: 'https://example.com/images/door.jpg',
+              ),
             ],
           ),
           Lesson(
             id: '2-2',
             title: 'External Features',
             words: [
-              Word(text: 'Step', imageUrl: 'https://example.com/images/step.jpg'),
+              Word(
+                text: 'Step',
+                imageUrl: 'https://example.com/images/step.jpg',
+              ),
               Word(
                 text: 'Handle',
                 imageUrl: 'https://example.com/images/handle.jpg',
@@ -213,7 +222,10 @@ class LessonProvider extends ChangeNotifier {
             id: '3-2',
             title: 'Driver Comfort',
             words: [
-              Word(text: 'Seat', imageUrl: 'https://example.com/images/seat.jpg'),
+              Word(
+                text: 'Seat',
+                imageUrl: 'https://example.com/images/seat.jpg',
+              ),
               Word(
                 text: 'Steering Wheel',
                 imageUrl: 'https://example.com/images/steering_wheel.jpg',
@@ -230,7 +242,10 @@ class LessonProvider extends ChangeNotifier {
                 text: 'Storage',
                 imageUrl: 'https://example.com/images/storage.jpg',
               ),
-              Word(text: 'Bunk', imageUrl: 'https://example.com/images/bunk.jpg'),
+              Word(
+                text: 'Bunk',
+                imageUrl: 'https://example.com/images/bunk.jpg',
+              ),
             ],
           ),
         ],
@@ -288,7 +303,10 @@ class LessonProvider extends ChangeNotifier {
                 text: 'Shock Absorber',
                 imageUrl: 'https://example.com/images/shock_absorber.jpg',
               ),
-              Word(text: 'Axle', imageUrl: 'https://example.com/images/axle.jpg'),
+              Word(
+                text: 'Axle',
+                imageUrl: 'https://example.com/images/axle.jpg',
+              ),
               Word(
                 text: 'Differential',
                 imageUrl: 'https://example.com/images/differential.jpg',
@@ -301,7 +319,7 @@ class LessonProvider extends ChangeNotifier {
     ];
     notifyListeners();
   }
-  
+
   // Find lesson by ID
   Lesson? getLessonById(String lessonId) {
     for (models.Category category in _categories) {
@@ -313,37 +331,45 @@ class LessonProvider extends ChangeNotifier {
     }
     return null;
   }
-  
+
   // Mark lesson as completed
   void markLessonAsCompleted(String lessonId) {
-    for (int categoryIndex = 0; categoryIndex < _categories.length; categoryIndex++) {
+    for (
+      int categoryIndex = 0;
+      categoryIndex < _categories.length;
+      categoryIndex++
+    ) {
       List<Lesson> lessons = List.from(_categories[categoryIndex].lessons);
-      
+
       for (int lessonIndex = 0; lessonIndex < lessons.length; lessonIndex++) {
         if (lessons[lessonIndex].id == lessonId) {
-          lessons[lessonIndex] = lessons[lessonIndex].copyWith(isCompleted: true);
-          
+          lessons[lessonIndex] = lessons[lessonIndex].copyWith(
+            isCompleted: true,
+          );
+
           // Update the category with modified lessons
-          _categories[categoryIndex] = _categories[categoryIndex].copyWith(lessons: lessons);
-          
+          _categories[categoryIndex] = _categories[categoryIndex].copyWith(
+            lessons: lessons,
+          );
+
           notifyListeners();
           return;
         }
       }
     }
   }
-  
+
   // Get completed lessons
   List<Lesson> get completedLessons {
     return allLessons.where((lesson) => lesson.isCompleted).toList();
   }
-  
+
   // Get lessons by category ID
   List<Lesson> getLessonsByCategoryId(String categoryId) {
     models.Category? category = getCategoryById(categoryId);
     return category?.lessons ?? [];
   }
-  
+
   // Find category by ID
   models.Category? getCategoryById(String categoryId) {
     try {
@@ -352,7 +378,7 @@ class LessonProvider extends ChangeNotifier {
       return null;
     }
   }
-  
+
   // Get filtered categories by search query
   List<models.Category> getFilteredCategories(String searchQuery) {
     if (searchQuery.isEmpty) {
@@ -360,30 +386,34 @@ class LessonProvider extends ChangeNotifier {
     }
 
     return _categories.where((category) {
-      final titleMatch = category.title.toLowerCase().contains(searchQuery.toLowerCase());
-      final descriptionMatch = category.shortDescription.toLowerCase().contains(searchQuery.toLowerCase());
+      final titleMatch = category.title.toLowerCase().contains(
+        searchQuery.toLowerCase(),
+      );
+      final descriptionMatch = category.shortDescription.toLowerCase().contains(
+        searchQuery.toLowerCase(),
+      );
       return titleMatch || descriptionMatch;
     }).toList();
   }
-  
+
   // Get completion statistics
   Map<String, int> get completionStats {
     int totalLessons = allLessons.length;
     int completedCount = completedLessons.length;
     int remainingCount = totalLessons - completedCount;
-    
+
     return {
       'total': totalLessons,
       'completed': completedCount,
       'remaining': remainingCount,
     };
   }
-  
+
   // Calculate completion percentage
   double get completionPercentage {
     int total = allLessons.length;
     int completed = completedLessons.length;
-    
+
     if (total == 0) return 0.0;
     return (completed / total) * 100;
   }
