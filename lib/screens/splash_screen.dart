@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import 'package:truck_eng_app/constants/app_colors.dart';
 import 'package:truck_eng_app/screens/home_screen.dart';
+import 'package:truck_eng_app/providers/category_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -34,13 +36,28 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+    // Delay data loading until after the first frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
     });
+  }
+
+  Future<void> _loadData() async {
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+
+    try {
+      await categoryProvider.fetchCategories();
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    }
   }
 
   @override

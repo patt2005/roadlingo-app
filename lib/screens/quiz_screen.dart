@@ -2,34 +2,56 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:truck_eng_app/constants/app_colors.dart';
-import 'package:truck_eng_app/models/lesson.dart';
 import 'package:truck_eng_app/models/word.dart';
 import 'package:truck_eng_app/providers/user_provider.dart';
-import 'package:truck_eng_app/providers/lesson_provider.dart';
 
-class LessonDetailScreen extends StatefulWidget {
-  final Lesson lesson;
-  final String lessonType;
+class QuizScreen extends StatefulWidget {
+  final List<Word> words;
+  final String title;
 
-  const LessonDetailScreen({
+  const QuizScreen({
     super.key,
-    required this.lesson,
-    required this.lessonType,
+    required this.words,
+    required this.title,
   });
 
   @override
-  State<LessonDetailScreen> createState() => _LessonDetailScreenState();
+  State<QuizScreen> createState() => _QuizScreenState();
 }
 
-class _LessonDetailScreenState extends State<LessonDetailScreen> {
+class _QuizScreenState extends State<QuizScreen> {
   int _currentWordIndex = 0;
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _lessonCompleted = false;
   bool _isPlaying = false;
 
-  Word get _currentWord => widget.lesson.words[_currentWordIndex];
+  Word get _currentWord => widget.words[_currentWordIndex];
   bool get _isFirstWord => _currentWordIndex == 0;
-  bool get _isLastWord => _currentWordIndex == widget.lesson.words.length - 1;
+  bool get _isLastWord => _currentWordIndex == widget.words.length - 1;
+
+  Translation _getTranslationForLanguage(Word word, Language language) {
+    // Try to find translation for the selected language
+    final translation = word.translations.firstWhere(
+      (t) => t.language == language,
+      orElse: () {
+        // If not found, try to find English translation
+        final englishTranslation = word.translations.firstWhere(
+          (t) => t.language == Language.english,
+          orElse: () {
+            // If no English translation, return the first available
+            return word.translations.isNotEmpty
+                ? word.translations.first
+                : Translation(
+                    language: language,
+                    translatedText: word.term,
+                  );
+          },
+        );
+        return englishTranslation;
+      },
+    );
+    return translation;
+  }
 
   void _previousWord() {
     if (!_isFirstWord) {
@@ -57,10 +79,6 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     // Update user progress
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     userProvider.incrementWordsLearned();
-
-    // Mark lesson as completed in lesson provider
-    final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
-    lessonProvider.markLessonAsCompleted(widget.lesson.id);
 
     showDialog(
       context: context,
@@ -101,7 +119,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'You\'ve successfully completed the "${widget.lesson.title}" lesson!',
+                'You\'ve successfully completed this lesson!',
                 style: TextStyle(
                   fontSize: 16,
                   color: AppColors.text.withValues(alpha: 0.7),
@@ -125,7 +143,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     Icon(Icons.school, color: AppColors.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Words learned: ${widget.lesson.words.length}',
+                      'Words learned: ${widget.words.length}',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.primary,
@@ -141,7 +159,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Go back to lesson list
+                    Navigator.of(context).pop(); // Go back to previous screen
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
@@ -194,7 +212,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No audio available for: ${_currentWord.text}'),
+            content: Text('No audio available for: ${_currentWord.term}'),
             backgroundColor: AppColors.primary,
             duration: const Duration(seconds: 2),
           ),
@@ -217,7 +235,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          widget.lesson.title,
+          widget.title,
           style: TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
@@ -235,7 +253,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${_currentWordIndex + 1}/${widget.lesson.words.length}',
+              '${_currentWordIndex + 1}/${widget.words.length}',
               style: TextStyle(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
@@ -258,8 +276,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               ),
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
-                widthFactor:
-                    (_currentWordIndex + 1) / widget.lesson.words.length,
+                widthFactor: (_currentWordIndex + 1) / widget.words.length,
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.primary,
@@ -298,37 +315,42 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // Word image
-                          Container(
-                            width: 150,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                          if (_currentWord.imageUrl != null)
+                            Container(
+                              width: 150,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _currentWord.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      child: Icon(
+                                        Icons.image,
+                                        size: 40,
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
-                            child: Image.network(
-                              _currentWord.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  child: Icon(
-                                    Icons.image,
-                                    size: 40,
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.5,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
 
                           const SizedBox(height: 20),
 
                           // Word display
                           Text(
-                            _currentWord.text,
+                            _currentWord.term,
                             style: TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
@@ -340,46 +362,91 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
                           const SizedBox(height: 12),
 
-                          // Word explanation
-                          if (_currentWord.explanation != null)
-                            Padding(
+                          // Part of speech
+                          if (_currentWord.partOfSpeech != null)
+                            Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                _currentWord.explanation!,
+                                _currentWord.partOfSpeech!,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.text.withValues(alpha: 0.7),
-                                  height: 1.4,
+                                  fontSize: 14,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
 
                           const SizedBox(height: 20),
 
-                          // Word type indicator
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              widget.lessonType == 'Words'
-                                  ? 'Vocabulary'
-                                  : 'Phrase',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
+                          // Translation
+                          if (_currentWord.translations.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Consumer<UserProvider>(
+                                builder: (context, userProvider, child) {
+                                  final translation = _getTranslationForLanguage(
+                                    _currentWord,
+                                    userProvider.selectedLanguage,
+                                  );
+
+                                  return Column(
+                                    children: [
+                                      Text(
+                                        translation.translatedText,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: AppColors.text.withValues(alpha: 0.8),
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      if (translation.definition != null) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          translation.definition!,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: AppColors.text.withValues(alpha: 0.6),
+                                            height: 1.4,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                      if (translation.usageExample != null) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '"${translation.usageExample}"',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.text.withValues(alpha: 0.7),
+                                              fontStyle: FontStyle.italic,
+                                              height: 1.4,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  );
+                                },
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -391,35 +458,32 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildActionButton(
-                          icon:
-                              _isPlaying
-                                  ? Container(
-                                    margin: EdgeInsets.all(15),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary,
-                                      ),
+                          icon: _isPlaying
+                              ? Container(
+                                  margin: EdgeInsets.all(15),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
                                     ),
-                                  )
-                                  : Icon(
-                                    Icons.volume_up,
-                                    color: AppColors.primary,
-                                    size: 25,
                                   ),
+                                )
+                              : Icon(
+                                  Icons.volume_up,
+                                  color: AppColors.primary,
+                                  size: 25,
+                                ),
                           label: 'Listen',
                           onTap: _playAudio,
                         ),
                         _buildActionButton(
-                          icon: Icon(Icons.translate),
-                          label: 'Translate',
-                          onTap: () {},
-                        ),
-                        _buildActionButton(
-                          icon:
-                              userProvider.isWordFavorite(_currentWord)
-                                  ? Icon(Icons.bookmark)
-                                  : Icon(Icons.bookmark_border),
+                          icon: Icon(
+                            userProvider.isWordFavorite(_currentWord)
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: AppColors.primary,
+                            size: 25,
+                          ),
                           label: 'Save',
                           onTap: () {
                             userProvider.toggleWordFavorite(_currentWord);
@@ -430,10 +494,40 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                               SnackBar(
                                 content: Text(
                                   isNowFavorite
-                                      ? '${_currentWord.text} saved to favorites'
-                                      : '${_currentWord.text} removed from favorites',
+                                      ? '${_currentWord.term} saved to favorites'
+                                      : '${_currentWord.term} removed from favorites',
                                 ),
                                 backgroundColor: AppColors.primary,
+                              ),
+                            );
+                          },
+                        ),
+                        _buildActionButton(
+                          icon: Icon(
+                            userProvider.isWordAlreadyKnown(_currentWord.id)
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline,
+                            color: userProvider.isWordAlreadyKnown(_currentWord.id)
+                                ? Colors.green
+                                : AppColors.primary,
+                            size: 25,
+                          ),
+                          label: 'Know',
+                          onTap: () {
+                            userProvider.toggleWordAlreadyKnown(_currentWord.id);
+                            final isNowKnown = userProvider.isWordAlreadyKnown(
+                              _currentWord.id,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isNowKnown
+                                      ? '${_currentWord.term} marked as already known'
+                                      : '${_currentWord.term} unmarked as known',
+                                ),
+                                backgroundColor: isNowKnown
+                                    ? Colors.green
+                                    : AppColors.primary,
                               ),
                             );
                           },
@@ -455,23 +549,20 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _isFirstWord ? null : _previousWord,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            _isFirstWord
-                                ? AppColors.text.withValues(alpha: 0.1)
-                                : AppColors.background,
-                        foregroundColor:
-                            _isFirstWord
-                                ? AppColors.text.withValues(alpha: 0.4)
-                                : AppColors.primary,
+                        backgroundColor: _isFirstWord
+                            ? AppColors.text.withValues(alpha: 0.1)
+                            : AppColors.background,
+                        foregroundColor: _isFirstWord
+                            ? AppColors.text.withValues(alpha: 0.4)
+                            : AppColors.primary,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
-                            color:
-                                _isFirstWord
-                                    ? AppColors.text.withValues(alpha: 0.2)
-                                    : AppColors.primary.withValues(alpha: 0.3),
+                            color: _isFirstWord
+                                ? AppColors.text.withValues(alpha: 0.2)
+                                : AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
                       ),
@@ -488,17 +579,15 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                   // Next/Finish button
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed:
-                          _isLastWord && !_lessonCompleted
-                              ? _nextWord
-                              : (_isLastWord ? null : _nextWord),
+                      onPressed: _isLastWord && !_lessonCompleted
+                          ? _nextWord
+                          : (_isLastWord ? null : _nextWord),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            _isLastWord && !_lessonCompleted
-                                ? Colors.green
-                                : (_isLastWord
-                                    ? AppColors.text.withValues(alpha: 0.3)
-                                    : AppColors.primary),
+                        backgroundColor: _isLastWord && !_lessonCompleted
+                            ? Colors.green
+                            : (_isLastWord
+                                ? AppColors.text.withValues(alpha: 0.3)
+                                : AppColors.primary),
                         foregroundColor: Colors.white,
                         elevation: _isLastWord && _lessonCompleted ? 0 : 2,
                         padding: const EdgeInsets.symmetric(vertical: 16),

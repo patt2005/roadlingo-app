@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:truck_eng_app/screens/splash_screen.dart';
 import 'package:truck_eng_app/constants/app_colors.dart';
 import 'package:truck_eng_app/providers/user_provider.dart';
-import 'package:truck_eng_app/providers/lesson_provider.dart';
+import 'package:truck_eng_app/providers/category_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
           create: (context) => UserProvider()..initializeDefaultUser(),
         ),
         ChangeNotifierProvider(
-          create: (context) => LessonProvider(),
+          create: (context) => CategoryProvider(),
         ),
       ],
       child: MaterialApp(

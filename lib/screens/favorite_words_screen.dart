@@ -42,14 +42,13 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
         _isSearching = false;
       } else {
         _isSearching = true;
-        _filteredWords =
-            favoriteWords
-                .where(
-                  (word) => word.text.toLowerCase().contains(
+        _filteredWords = favoriteWords
+            .where(
+              (word) => word.term.toLowerCase().contains(
                     _searchController.text.toLowerCase(),
                   ),
-                )
-                .toList();
+            )
+            .toList();
       }
     });
   }
@@ -58,7 +57,7 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
     if (word.audioUrl != null && word.audioUrl!.isNotEmpty) {
       try {
         setState(() {
-          _playingWordId = word.text;
+          _playingWordId = word.id;
         });
 
         await _audioPlayer.play(UrlSource(word.audioUrl!));
@@ -88,13 +87,264 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No audio available for: ${word.text}'),
+            content: Text('No audio available for: ${word.term}'),
             backgroundColor: AppColors.primary,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     }
+  }
+
+  void _showWordDetailsModal(Word word) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.text.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Word image
+                      if (word.imageUrl != null)
+                        Center(
+                          child: Container(
+                            width: 200,
+                            height: 160,
+                            margin: const EdgeInsets.only(bottom: 24),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.network(
+                                word.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.image,
+                                    size: 60,
+                                    color: AppColors.primary.withValues(alpha: 0.5),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Term
+                      Text(
+                        word.term,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.text,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Part of speech
+                      if (word.partOfSpeech != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            word.partOfSpeech!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Translation
+                      if (word.translations.isNotEmpty) ...[
+                        Text(
+                          'Translation',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          word.translations.first.translatedText,
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: AppColors.text,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Definition
+                        if (word.translations.first.definition != null) ...[
+                          Text(
+                            'Definition',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            word.translations.first.definition!,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.text,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Pronunciation
+                        if (word.translations.first.pronunciation != null) ...[
+                          Text(
+                            'Pronunciation',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            word.translations.first.pronunciation!,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.text,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Usage Example
+                        if (word.translations.first.usageExample != null) ...[
+                          Text(
+                            'Example',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: Text(
+                              '"${word.translations.first.usageExample}"',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.text,
+                                fontStyle: FontStyle.italic,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ],
+
+                      // Play audio button
+                      if (word.audioUrl != null && word.audioUrl!.isNotEmpty)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            onPressed: _playingWordId == word.id
+                                ? null
+                                : () => _playAudio(word),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            icon: _playingWordId == word.id
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.volume_up,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                            label: Text(
+                              _playingWordId == word.id
+                                  ? 'Playing...'
+                                  : 'Play Audio',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showRemoveConfirmationDialog(Word word) {
@@ -114,7 +364,7 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
             ),
           ),
           content: Text(
-            'Are you sure you want to remove "${word.text}" from your favorites?',
+            'Are you sure you want to remove "${word.term}" from your favorites?',
             style: TextStyle(color: AppColors.text),
           ),
           actions: [
@@ -153,7 +403,7 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${word.text} removed from favorites'),
+        content: Text('${word.term} removed from favorites'),
         backgroundColor: AppColors.primary,
         action: SnackBarAction(
           label: 'UNDO',
@@ -226,18 +476,17 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
                       Icons.search,
                       color: AppColors.primary.withValues(alpha: 0.7),
                     ),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: AppColors.text.withValues(alpha: 0.5),
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                              },
-                            )
-                            : null,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: AppColors.text.withValues(alpha: 0.5),
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -271,10 +520,9 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
               const SizedBox(height: 20),
 
               Expanded(
-                child:
-                    favoriteWords.isEmpty
-                        ? _buildEmptyState()
-                        : wordsToDisplay.isEmpty
+                child: favoriteWords.isEmpty
+                    ? _buildEmptyState()
+                    : wordsToDisplay.isEmpty
                         ? _buildNoResultsState()
                         : _buildWordsList(wordsToDisplay),
               ),
@@ -403,7 +651,7 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
               borderRadius: BorderRadius.circular(16),
               splashColor: AppColors.primary.withValues(alpha: 0.05),
               highlightColor: AppColors.primary.withValues(alpha: 0.02),
-              onTap: () => _playAudio(word),
+              onTap: () => _showWordDetailsModal(word),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -416,23 +664,33 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          word.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              child: Icon(
-                                Icons.image,
-                                size: 30,
-                                color: AppColors.primary.withValues(alpha: 0.5),
+                      child: word.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                word.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 30,
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                            )
+                          : Icon(
+                              Icons.translate,
+                              size: 30,
+                              color: AppColors.primary.withValues(alpha: 0.5),
+                            ),
                     ),
 
                     const SizedBox(width: 16),
@@ -443,13 +701,25 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            word.text,
+                            word.term,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.text,
                             ),
                           ),
+                          if (word.translations.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              word.translations.first.translatedText,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text.withValues(alpha: 0.7),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -471,28 +741,28 @@ class _FavoriteWordsScreenState extends State<FavoriteWordsScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap:
-                                  _playingWordId == word.text
-                                      ? null
-                                      : () => _playAudio(word),
-                              child:
-                                  _playingWordId == word.text
-                                      ? SizedBox(
-                                        width: 10,
-                                        height: 10,
+                              onTap: _playingWordId == word.id
+                                  ? null
+                                  : () => _playAudio(word),
+                              child: _playingWordId == word.id
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                AppColors.primary,
-                                              ),
+                                            AppColors.primary,
+                                          ),
                                         ),
-                                      )
-                                      : Icon(
-                                        Icons.volume_up,
-                                        color: AppColors.primary,
-                                        size: 20,
                                       ),
+                                    )
+                                  : Icon(
+                                      Icons.volume_up,
+                                      color: AppColors.primary,
+                                      size: 20,
+                                    ),
                             ),
                           ),
                         ),

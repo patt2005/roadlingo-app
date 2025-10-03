@@ -5,7 +5,7 @@ import 'package:truck_eng_app/constants/app_colors.dart';
 import 'package:truck_eng_app/screens/profile_screen.dart';
 import 'package:truck_eng_app/screens/category_details_screen.dart';
 import 'package:truck_eng_app/providers/user_provider.dart';
-import 'package:truck_eng_app/providers/lesson_provider.dart';
+import 'package:truck_eng_app/providers/category_provider.dart';
 import 'package:truck_eng_app/models/category.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,17 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
-    });
-
-    // Initialize lesson provider data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final lessonProvider = Provider.of<LessonProvider>(
-        context,
-        listen: false,
-      );
-      if (lessonProvider.categories.isEmpty) {
-        lessonProvider.initializeCategories();
-      }
     });
   }
 
@@ -113,68 +102,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Search field
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: CupertinoColors.systemGrey6,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: TextField(
+                  child: CupertinoSearchTextField(
                     controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search categories...',
-                      hintStyle: TextStyle(
-                        color: AppColors.text.withValues(alpha: 0.5),
-                        fontSize: 16,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: AppColors.text.withValues(alpha: 0.5),
-                        size: 22,
-                      ),
-                      suffixIcon:
-                          _searchQuery.isNotEmpty
-                              ? IconButton(
-                                icon: Icon(
-                                  Icons.clear,
-                                  color: AppColors.text.withValues(alpha: 0.5),
-                                  size: 22,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                },
-                              )
-                              : null,
-                      filled: true,
-                      fillColor: Colors.grey.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.1),
-                          width: 1,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
+                    placeholder: 'Search categories...',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 16,
                     ),
-                    style: TextStyle(color: AppColors.text, fontSize: 16),
+                    placeholderStyle: TextStyle(
+                      color: AppColors.text.withValues(alpha: 0.5),
+                      fontSize: 16,
+                    ),
+                    prefixIcon: Icon(
+                      CupertinoIcons.search,
+                      color: AppColors.text.withValues(alpha: 0.5),
+                      size: 20,
+                    ),
+                    suffixIcon: Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: AppColors.text.withValues(alpha: 0.5),
+                      size: 20,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 12,
+                    ),
                   ),
                 ),
 
@@ -188,10 +143,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Consumer<LessonProvider>(
-                  builder: (context, lessonProvider, child) {
-                    final filteredCategories = lessonProvider
-                        .getFilteredCategories(_searchQuery);
+                Consumer<CategoryProvider>(
+                  builder: (context, categoryProvider, child) {
+                    if (categoryProvider.isLoading) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: CupertinoActivityIndicator(
+                            color: AppColors.primary,
+                            radius: 20,
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (categoryProvider.error != null) {
+                      return Container(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error loading categories',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.text.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Please try again later',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final allCategories = categoryProvider.categories;
+                    final filteredCategories = _searchQuery.isEmpty
+                        ? allCategories
+                        : allCategories
+                            .where((category) =>
+                                category.name.toLowerCase().contains(_searchQuery) ||
+                                (category.description?.toLowerCase().contains(_searchQuery) ?? false))
+                            .toList();
 
                     return filteredCategories.isEmpty && _searchQuery.isNotEmpty
                         ? Container(
@@ -278,45 +283,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
-                  image: DecorationImage(
-                    image: NetworkImage(category.imageUrl),
-                    fit: BoxFit.cover,
-                  ),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.3),
-                      ],
-                    ),
-                  ),
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.background.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                child: category.iconUrl != null
+                    ? Image.network(
+                        category.iconUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              _getCategoryIcon(category.name),
+                              size: 60,
+                              color: AppColors.primary.withValues(alpha: 0.5),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
                         child: Icon(
-                          _getCategoryIcon(category.title),
-                          color: AppColors.primary,
-                          size: 20,
+                          _getCategoryIcon(category.name),
+                          size: 60,
+                          color: AppColors.primary.withValues(alpha: 0.5),
                         ),
                       ),
-                    ),
-                  ),
-                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -327,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            category.title,
+                            category.name,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -350,15 +339,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      category.shortDescription,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.text.withValues(alpha: 0.7),
-                        height: 1.4,
+                    if (category.description != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        category.description!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.text.withValues(alpha: 0.7),
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

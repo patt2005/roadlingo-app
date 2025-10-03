@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/word.dart';
 
 class User {
@@ -11,7 +12,9 @@ class User {
   final int currentStreak;
   final String? profileImageUrl;
   final List<Word> favoriteWords;
-  final String language;
+  final List<String> savedCategoryIds;
+  final List<String> alreadyKnownWordIds;
+  final Language language;
 
   User({
     required this.id,
@@ -23,7 +26,9 @@ class User {
     this.currentStreak = 0,
     this.profileImageUrl,
     this.favoriteWords = const [],
-    this.language = 'en',
+    this.savedCategoryIds = const [],
+    this.alreadyKnownWordIds = const [],
+    this.language = Language.english,
   });
 
   User copyWith({
@@ -36,7 +41,9 @@ class User {
     int? currentStreak,
     String? profileImageUrl,
     List<Word>? favoriteWords,
-    String? language,
+    List<String>? savedCategoryIds,
+    List<String>? alreadyKnownWordIds,
+    Language? language,
   }) {
     return User(
       id: id ?? this.id,
@@ -48,6 +55,8 @@ class User {
       currentStreak: currentStreak ?? this.currentStreak,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       favoriteWords: favoriteWords ?? this.favoriteWords,
+      savedCategoryIds: savedCategoryIds ?? this.savedCategoryIds,
+      alreadyKnownWordIds: alreadyKnownWordIds ?? this.alreadyKnownWordIds,
       language: language ?? this.language,
     );
   }
@@ -82,11 +91,30 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateLanguage(String languageCode) {
+  Language get selectedLanguage {
+    return _currentUser?.language ?? Language.english;
+  }
+
+  void updateLanguage(Language language) async {
     if (_currentUser == null) return;
 
-    _currentUser = _currentUser!.copyWith(language: languageCode);
+    _currentUser = _currentUser!.copyWith(language: language);
     notifyListeners();
+
+    // Save to shared preferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_language', language.value);
+  }
+
+  Future<void> loadLanguagePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final languageValue = prefs.getInt('selected_language');
+
+    if (languageValue != null && _currentUser != null) {
+      final language = Language.fromValue(languageValue);
+      _currentUser = _currentUser!.copyWith(language: language);
+      notifyListeners();
+    }
   }
 
   void updateProgress({
@@ -136,7 +164,7 @@ class UserProvider extends ChangeNotifier {
     if (_currentUser == null) return;
     
     final currentFavorites = List<Word>.from(_currentUser!.favoriteWords);
-    if (!currentFavorites.any((w) => w.text == word.text)) {
+    if (!currentFavorites.any((w) => w.id == word.id)) {
       currentFavorites.add(word);
       _currentUser = _currentUser!.copyWith(favoriteWords: currentFavorites);
       notifyListeners();
@@ -147,7 +175,7 @@ class UserProvider extends ChangeNotifier {
     if (_currentUser == null) return;
     
     final currentFavorites = List<Word>.from(_currentUser!.favoriteWords);
-    currentFavorites.removeWhere((w) => w.text == word.text);
+    currentFavorites.removeWhere((w) => w.id == word.id);
     _currentUser = _currentUser!.copyWith(favoriteWords: currentFavorites);
     notifyListeners();
   }
@@ -164,11 +192,91 @@ class UserProvider extends ChangeNotifier {
 
   bool isWordFavorite(Word word) {
     if (_currentUser == null) return false;
-    return _currentUser!.favoriteWords.any((w) => w.text == word.text);
+    return _currentUser!.favoriteWords.any((w) => w.id == word.id);
   }
 
   List<Word> get favoriteWords {
     return _currentUser?.favoriteWords ?? [];
+  }
+
+  // Saved categories management
+  void addCategoryToSaved(String categoryId) {
+    if (_currentUser == null) return;
+
+    final currentSaved = List<String>.from(_currentUser!.savedCategoryIds);
+    if (!currentSaved.contains(categoryId)) {
+      currentSaved.add(categoryId);
+      _currentUser = _currentUser!.copyWith(savedCategoryIds: currentSaved);
+      notifyListeners();
+    }
+  }
+
+  void removeCategoryFromSaved(String categoryId) {
+    if (_currentUser == null) return;
+
+    final currentSaved = List<String>.from(_currentUser!.savedCategoryIds);
+    currentSaved.remove(categoryId);
+    _currentUser = _currentUser!.copyWith(savedCategoryIds: currentSaved);
+    notifyListeners();
+  }
+
+  void toggleCategorySaved(String categoryId) {
+    if (_currentUser == null) return;
+
+    if (isCategorySaved(categoryId)) {
+      removeCategoryFromSaved(categoryId);
+    } else {
+      addCategoryToSaved(categoryId);
+    }
+  }
+
+  bool isCategorySaved(String categoryId) {
+    if (_currentUser == null) return false;
+    return _currentUser!.savedCategoryIds.contains(categoryId);
+  }
+
+  List<String> get savedCategoryIds {
+    return _currentUser?.savedCategoryIds ?? [];
+  }
+
+  // Already known words management
+  void addWordToAlreadyKnown(String wordId) {
+    if (_currentUser == null) return;
+
+    final currentKnown = List<String>.from(_currentUser!.alreadyKnownWordIds);
+    if (!currentKnown.contains(wordId)) {
+      currentKnown.add(wordId);
+      _currentUser = _currentUser!.copyWith(alreadyKnownWordIds: currentKnown);
+      notifyListeners();
+    }
+  }
+
+  void removeWordFromAlreadyKnown(String wordId) {
+    if (_currentUser == null) return;
+
+    final currentKnown = List<String>.from(_currentUser!.alreadyKnownWordIds);
+    currentKnown.remove(wordId);
+    _currentUser = _currentUser!.copyWith(alreadyKnownWordIds: currentKnown);
+    notifyListeners();
+  }
+
+  void toggleWordAlreadyKnown(String wordId) {
+    if (_currentUser == null) return;
+
+    if (isWordAlreadyKnown(wordId)) {
+      removeWordFromAlreadyKnown(wordId);
+    } else {
+      addWordToAlreadyKnown(wordId);
+    }
+  }
+
+  bool isWordAlreadyKnown(String wordId) {
+    if (_currentUser == null) return false;
+    return _currentUser!.alreadyKnownWordIds.contains(wordId);
+  }
+
+  List<String> get alreadyKnownWordIds {
+    return _currentUser?.alreadyKnownWordIds ?? [];
   }
 
   void logout() {
@@ -176,7 +284,7 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void initializeDefaultUser() {
+  void initializeDefaultUser() async {
     _currentUser = User(
       id: 'default_user',
       name: 'Driver',
@@ -186,6 +294,9 @@ class UserProvider extends ChangeNotifier {
       wordsLearned: 247,
       currentStreak: 7,
     );
+
+    // Load saved language preference
+    await loadLanguagePreference();
     notifyListeners();
   }
 }

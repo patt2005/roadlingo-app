@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:truck_eng_app/constants/app_colors.dart';
 import 'package:truck_eng_app/providers/user_provider.dart';
+import 'package:truck_eng_app/models/word.dart';
 
 class LanguageSettingsScreen extends StatefulWidget {
   const LanguageSettingsScreen({super.key});
@@ -11,18 +12,44 @@ class LanguageSettingsScreen extends StatefulWidget {
 }
 
 class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
-  final List<Map<String, String>> _languages = [
-    {'code': 'en', 'name': 'English', 'flag': '🇺🇸'},
-    {'code': 'es', 'name': 'Spanish', 'flag': '🇪🇸'},
-    {'code': 'fr', 'name': 'French', 'flag': '🇫🇷'},
-    {'code': 'de', 'name': 'German', 'flag': '🇩🇪'},
-    {'code': 'it', 'name': 'Italian', 'flag': '🇮🇹'},
-    {'code': 'pt', 'name': 'Portuguese', 'flag': '🇵🇹'},
-    {'code': 'ru', 'name': 'Russian', 'flag': '🇷🇺'},
-    {'code': 'zh', 'name': 'Chinese', 'flag': '🇨🇳'},
-    {'code': 'ja', 'name': 'Japanese', 'flag': '🇯🇵'},
-    {'code': 'ko', 'name': 'Korean', 'flag': '🇰🇷'},
-  ];
+  String _getLanguageFlag(Language language) {
+    switch (language) {
+      case Language.english:
+        return '🇺🇸';
+      case Language.russian:
+        return '🇷🇺';
+      case Language.romanian:
+        return '🇷🇴';
+      case Language.ukrainian:
+        return '🇺🇦';
+      case Language.polish:
+        return '🇵🇱';
+      case Language.french:
+        return '🇫🇷';
+      case Language.mandarin:
+        return '🇨🇳';
+      case Language.uzbek:
+        return '🇺🇿';
+      case Language.tajik:
+        return '🇹🇯';
+      case Language.punjabi:
+        return '🇮🇳';
+      case Language.german:
+        return '🇩🇪';
+      case Language.hindi:
+        return '🇮🇳';
+      case Language.indonesian:
+        return '🇮🇩';
+      case Language.portuguese:
+        return '🇵🇹';
+      case Language.japanese:
+        return '🇯🇵';
+      case Language.turkish:
+        return '🇹🇷';
+      case Language.spanish:
+        return '🇪🇸';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +70,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       ),
       body: Consumer<UserProvider>(
         builder: (context, userProvider, child) {
-          final currentLanguage = userProvider.currentUser?.language ?? 'en';
+          final currentLanguageValue = userProvider.selectedLanguage;
 
           return Column(
             children: [
@@ -79,10 +106,10 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _languages.length,
+                  itemCount: Language.values.length,
                   itemBuilder: (context, index) {
-                    final language = _languages[index];
-                    final isSelected = language['code'] == currentLanguage;
+                    final language = Language.values[index];
+                    final isSelected = language == currentLanguageValue;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -110,11 +137,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap:
-                              () => _selectLanguage(
-                                language['code']!,
-                                userProvider,
-                              ),
+                          onTap: () => _selectLanguage(language, userProvider),
                           child: Padding(
                             padding: const EdgeInsets.all(20),
                             child: Row(
@@ -136,7 +159,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      language['flag']!,
+                                      _getLanguageFlag(language),
                                       style: const TextStyle(fontSize: 24),
                                     ),
                                   ),
@@ -146,7 +169,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
                                 Expanded(
                                   child: Text(
-                                    language['name']!,
+                                    language.displayName,
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight:
@@ -242,8 +265,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
     );
   }
 
-  void _selectLanguage(String languageCode, UserProvider userProvider) {
-    userProvider.updateLanguage(languageCode);
+  void _selectLanguage(Language language, UserProvider userProvider) {
+    userProvider.updateLanguage(language);
     setState(() {});
   }
 }
