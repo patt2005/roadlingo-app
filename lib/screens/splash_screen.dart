@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truck_eng_app/constants/app_colors.dart';
 import 'package:truck_eng_app/screens/home_screen.dart';
+import 'package:truck_eng_app/screens/onboarding_screen.dart';
 import 'package:truck_eng_app/providers/category_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -54,8 +56,15 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
 
     if (mounted) {
+      // Check if onboarding has been completed
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (context) =>
+              onboardingComplete ? const HomeScreen() : const OnboardingScreen(),
+        ),
       );
     }
   }

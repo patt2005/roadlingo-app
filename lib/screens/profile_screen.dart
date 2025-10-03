@@ -13,7 +13,7 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _sendSupportEmail() async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
-      path: 'support@truckengapp.com',
+      path: 'dev1@pileus.solutions',
       queryParameters: {
         'subject': 'Truck English App - Support Request',
         'body':
@@ -22,14 +22,22 @@ class ProfileScreen extends StatelessWidget {
     );
 
     try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-      } else {
-        throw Exception('Could not launch email client');
-      }
+      await launchUrl(emailUri);
     } catch (e) {
       // Handle error if email client is not available
       debugPrint('Error launching email: $e');
+    }
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final Uri privacyUri = Uri.parse(
+      'https://www.termsfeed.com/live/fd81f3c0-5fdb-4b54-b5c6-062ea22f97cf',
+    );
+
+    try {
+      await launchUrl(privacyUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error launching privacy policy: $e');
     }
   }
 
@@ -171,45 +179,13 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.privacy_tip,
                 title: 'Privacy Policy',
                 subtitle: 'Read our privacy policy',
-                onTap: () {},
+                onTap: _openPrivacyPolicy,
               ),
               _buildProfileOption(
                 icon: Icons.help,
                 title: 'Help & Support',
                 subtitle: 'Get help and contact support',
                 onTap: _sendSupportEmail,
-              ),
-
-              const SizedBox(height: 30),
-
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      context.read<UserProvider>().logout();
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    child: Center(
-                      child: Text(
-                        'Logout',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ),
 
               const SizedBox(height: 40),
